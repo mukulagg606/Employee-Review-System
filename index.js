@@ -10,8 +10,18 @@ const db = require('./config/mongoose');
 
 const bodyParser = require('body-parser');
 
+// Creating session
+const session = require('express-session');
+const passport = require('passport');
+const passportLocal = require('./config/passport-local');
+
+
 // requiring mongo-store, so that we can use the existing user even after server start
 const MongoStore = require('connect-mongo');
+
+// they are used for showing action notifications
+const flash = require('connect-flash'); 
+const flashMiddleWare = require('./config/flashMiddleware');
 
 // For getting the output from req.body(it will parse the upcoming request to String or Arrays).
 app.use(bodyParser.urlencoded({extended:false}));
@@ -24,9 +34,37 @@ app.set('views','./views');
 
 app.use(expressLayout);
 
+// mongo store is used to store the session cookie in the db 
+app.use(session({
+    name: "EmployeeReviewSystem",
+    // change secret during before deployment in production 
+    secret: "MukulAggArwal",
+    saveUninitialized: false,
+    resave: false,
+    cookie: {
+        maxAge: (1000 * 60 * 100)
+    },
+    store: MongoStore.create({
+        mongoUrl: 'mongodb://localhost:27017/employeeReviewSystem',
+        autoRemove: 'disabled'
+    },
+        (err) => {
+            console.log(err || 'connect-mongo setup ok');
+        }
+    )
+}))
+
+// Using passport
+app.use(passport.initialize());
+app.use(passport.session());
+app.use(passport.setAuthenticatedUser);
+
+// Using Connect flash
+app.use(flash());
+app.use(flashMiddleWare.setFlash);
+
 // setting up the router, following MVC structure.
 app.use('/' , require('./routes/index'));
-
 
 // Setting up the server at the given port
 app.listen(port, function(err){
